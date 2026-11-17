@@ -1,6 +1,6 @@
 # Lightweight Arabic Traffic Sign Recognition Using Layer-Wise Iterative Structured Pruning and Knowledge Distillation
 
-> T. Nugroho, E. B. Ashary, M. Bilal, and M. J. Abdulaal, "Lightweight Arabic Traffic Sign Recognition Using Layer-Wise Iterative Structured Pruning and Knowledge Distillation," *Computation* (MDPI), under review.
+> T. Nugroho, E. B. Ashary, M. Bilal, and M. J. Abdulaal, "Lightweight Arabic Traffic Sign Recognition Using Layer-Wise Iterative Structured Pruning and Knowledge Distillation," *Computation* (MDPI), Manuscript submitted for publication.
 
 This repository contains the training/evaluation pipeline and experiment logs supporting the paper above. A VGG16-BN model pre-trained on ImageNet is fine-tuned on the Arabic Traffic Signs (ArTS) dataset and kept as the teacher. Sparsity-inducing training is applied to the Batch Normalization scaling factors ($\gamma$), followed by layer-wise iterative structured pruning of convolutional channels and fully connected neurons, and finally knowledge distillation to recover the student model's accuracy.
 
@@ -77,7 +77,7 @@ Averaged over ten independent runs; the best single run reaches 99.81% test accu
   author  = {Nugroho, Triawan and Ashary, Ehab Bahaudien and Bilal, Muhammad and Abdulaal, Mohammed J.},
   journal = {Computation},
   year    = {2026},
-  note    = {Under review}
+  note    = {Manuscript submitted for publication}
 }
 ```
 
