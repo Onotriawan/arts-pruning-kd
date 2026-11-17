@@ -1,0 +1,38 @@
+C:\Users\tnugroho\Pruning_Paper\new_scripts_Pruning_Kd.py:1273: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(path, map_location=device)
+Menggunakan device: cuda
+
+======================================================================
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run1.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run2.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run3.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run4.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run5.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run6.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run7.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run8.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run9.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run10.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+
+Unaligned (3_distilled) (n=10 runs):
+  Params : mean=23,729,325  sd=0
+  GFLOPs : mean=0.4905  sd=0.0000
+  Per-run params: [23729325, 23729325, 23729325, 23729325, 23729325, 23729325, 23729325, 23729325, 23729325, 23729325]
+  Per-run GFLOPs: [0.4905, 0.4905, 0.4905, 0.4905, 0.4905, 0.4905, 0.4905, 0.4905, 0.4905, 0.4905]
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run1.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run2.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run3.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run4.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run5.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run6.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run7.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run8.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run9.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run10.pt (backbone_type='vgg', 91.5 MB, 23,980,488 params)
+
+Aligned (5_distilled_aligned) (n=10 runs):
+  Params : mean=23,980,488  sd=0
+  GFLOPs : mean=0.6241  sd=0.0000
+  Per-run params: [23980488, 23980488, 23980488, 23980488, 23980488, 23980488, 23980488, 23980488, 23980488, 23980488]
+  Per-run GFLOPs: [0.6241, 0.6241, 0.6241, 0.6241, 0.6241, 0.6241, 0.6241, 0.6241, 0.6241, 0.6241]
+======================================================================

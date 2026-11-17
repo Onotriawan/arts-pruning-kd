@@ -1,0 +1,232 @@
+Note: 'D:\Documents\Computer Eng\PhD\Lecture PhD\Python\Special Topic AI\data\ArabicTrafficSigns\Labels_Train_Arabic_Traffic_Signs_24_2200.csv' has no header row -- assuming column 0 = filename, column 1 = label. First 3 rows:
+           filename  label
+0   front_or_left-1      0
+1  front_or_left-22      0
+2  front_or_left-64      0
+
+Note: 'D:\Documents\Computer Eng\PhD\Lecture PhD\Python\Special Topic AI\data\ArabicTrafficSigns\Labels_Test_Arabic_Traffic_Signs_24_518.csv' has no header row -- assuming column 0 = filename, column 1 = label. First 3 rows:
+            filename  label
+0   front_or_left-43      0
+1  front_or_left-337      0
+2  front_or_left-400      0
+
+Split train/val/test (channel-rounding PoC): 1870 train, 330 val, 518 test.
+
+######################################################################
+# RUN 1 -- channel rounding to multiples of 8 (Eq. 4)
+######################################################################
+
+[1/4] Load starting point (teacher, PRE sparse-training): D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\1_finetuned_augv2_run1.pt
+C:\Users\tnugroho\Pruning_Paper\new_scripts_Pruning_Kd.py:1273: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(path, map_location=device)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\1_finetuned_augv2_run1.pt (backbone_type='vgg', 512.6 MB, 134,367,320 params)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\1_finetuned_augv2_run1.pt (backbone_type='vgg', 512.6 MB, 134,367,320 params)
+[2/4] Stage 1: sparse_train (30 epoch) ...
+  [sparse-train] epoch 1/30  loss=9.5881
+  [sparse-train] epoch 2/30  loss=9.3126
+  [sparse-train] epoch 3/30  loss=9.0215
+  [sparse-train] epoch 4/30  loss=8.7326
+  [sparse-train] epoch 5/30  loss=8.4438
+  [sparse-train] epoch 6/30  loss=8.1611
+  [sparse-train] epoch 7/30  loss=7.8761
+  [sparse-train] epoch 8/30  loss=7.6014
+  [sparse-train] epoch 9/30  loss=7.3218
+  [sparse-train] epoch 10/30  loss=7.0468
+  [sparse-train] epoch 11/30  loss=6.7764
+  [sparse-train] epoch 12/30  loss=6.5226
+  [sparse-train] epoch 13/30  loss=6.2657
+  [sparse-train] epoch 14/30  loss=6.0142
+  [sparse-train] epoch 15/30  loss=5.8027
+  [sparse-train] epoch 16/30  loss=5.5939
+  [sparse-train] epoch 17/30  loss=5.3536
+  [sparse-train] epoch 18/30  loss=5.1471
+  [sparse-train] epoch 19/30  loss=4.9985
+  [sparse-train] epoch 20/30  loss=4.7656
+  [sparse-train] epoch 21/30  loss=4.5662
+  [sparse-train] epoch 22/30  loss=4.3640
+  [sparse-train] epoch 23/30  loss=4.1173
+  [sparse-train] epoch 24/30  loss=3.9144
+  [sparse-train] epoch 25/30  loss=3.6976
+  [sparse-train] epoch 26/30  loss=3.5220
+  [sparse-train] epoch 27/30  loss=3.3683
+  [sparse-train] epoch 28/30  loss=3.1941
+  [sparse-train] epoch 29/30  loss=3.0369
+  [sparse-train] epoch 30/30  loss=2.8620
+[3/4] Stage 2: iterative_prune dengan prune_vgg_full_aligned (round_to=8, 10 langkah x 10 epoch) ...
+Step 0 (sebelum iterative pruning): acc=0.9364, params=134367320
+
+Step 1/10: potong (rate per-langkah=0.083) -> acc=0.9242, params=113658328
+  [sparse-train] epoch 1/10  loss=2.6306
+  [sparse-train] epoch 2/10  loss=2.4735
+  [sparse-train] epoch 3/10  loss=2.3648
+  [sparse-train] epoch 4/10  loss=2.2554
+  [sparse-train] epoch 5/10  loss=2.1975
+  [sparse-train] epoch 6/10  loss=2.0911
+  [sparse-train] epoch 7/10  loss=1.9943
+  [sparse-train] epoch 8/10  loss=1.9733
+  [sparse-train] epoch 9/10  loss=1.9303
+  [sparse-train] epoch 10/10  loss=1.8831
+          setelah fine-tune 10 epoch -> acc=0.8970
+
+Step 2/10: potong (rate per-langkah=0.083) -> acc=0.8879, params=95455056
+  [sparse-train] epoch 1/10  loss=1.7138
+  [sparse-train] epoch 2/10  loss=1.6050
+  [sparse-train] epoch 3/10  loss=1.5347
+  [sparse-train] epoch 4/10  loss=1.4791
+  [sparse-train] epoch 5/10  loss=1.4721
+  [sparse-train] epoch 6/10  loss=1.4677
+  [sparse-train] epoch 7/10  loss=1.3975
+  [sparse-train] epoch 8/10  loss=1.3454
+  [sparse-train] epoch 9/10  loss=1.3040
+  [sparse-train] epoch 10/10  loss=1.2899
+          setelah fine-tune 10 epoch -> acc=0.9394
+
+Step 3/10: potong (rate per-langkah=0.083) -> acc=0.9364, params=81005200
+  [sparse-train] epoch 1/10  loss=1.1787
+  [sparse-train] epoch 2/10  loss=1.1158
+  [sparse-train] epoch 3/10  loss=1.1122
+  [sparse-train] epoch 4/10  loss=1.1261
+  [sparse-train] epoch 5/10  loss=1.0824
+  [sparse-train] epoch 6/10  loss=1.1367
+  [sparse-train] epoch 7/10  loss=1.0643
+  [sparse-train] epoch 8/10  loss=1.0054
+  [sparse-train] epoch 9/10  loss=0.9752
+  [sparse-train] epoch 10/10  loss=0.9600
+          setelah fine-tune 10 epoch -> acc=0.9333
+
+Step 4/10: potong (rate per-langkah=0.083) -> acc=0.9303, params=68310272
+  [sparse-train] epoch 1/10  loss=0.8820
+  [sparse-train] epoch 2/10  loss=0.8459
+  [sparse-train] epoch 3/10  loss=0.8669
+  [sparse-train] epoch 4/10  loss=0.8523
+  [sparse-train] epoch 5/10  loss=0.8483
+  [sparse-train] epoch 6/10  loss=0.8315
+  [sparse-train] epoch 7/10  loss=0.7896
+  [sparse-train] epoch 8/10  loss=0.8111
+  [sparse-train] epoch 9/10  loss=0.8162
+  [sparse-train] epoch 10/10  loss=0.7706
+          setelah fine-tune 10 epoch -> acc=0.9727
+
+Step 5/10: potong (rate per-langkah=0.083) -> acc=0.9636, params=57219360
+  [sparse-train] epoch 1/10  loss=0.7263
+  [sparse-train] epoch 2/10  loss=0.6729
+  [sparse-train] epoch 3/10  loss=0.6742
+  [sparse-train] epoch 4/10  loss=0.7025
+  [sparse-train] epoch 5/10  loss=0.6951
+  [sparse-train] epoch 6/10  loss=0.6458
+  [sparse-train] epoch 7/10  loss=0.6250
+  [sparse-train] epoch 8/10  loss=0.6530
+  [sparse-train] epoch 9/10  loss=0.6424
+  [sparse-train] epoch 10/10  loss=0.6195
+          setelah fine-tune 10 epoch -> acc=0.9273
+
+Step 6/10: potong (rate per-langkah=0.083) -> acc=0.9303, params=47426656
+  [sparse-train] epoch 1/10  loss=0.5793
+  [sparse-train] epoch 2/10  loss=0.5445
+  [sparse-train] epoch 3/10  loss=0.5619
+  [sparse-train] epoch 4/10  loss=0.5363
+  [sparse-train] epoch 5/10  loss=0.5389
+  [sparse-train] epoch 6/10  loss=0.5735
+  [sparse-train] epoch 7/10  loss=0.5422
+  [sparse-train] epoch 8/10  loss=0.5101
+  [sparse-train] epoch 9/10  loss=0.4932
+  [sparse-train] epoch 10/10  loss=0.4953
+          setelah fine-tune 10 epoch -> acc=0.9333
+
+Step 7/10: potong (rate per-langkah=0.083) -> acc=0.9333, params=40061472
+  [sparse-train] epoch 1/10  loss=0.4675
+  [sparse-train] epoch 2/10  loss=0.4548
+  [sparse-train] epoch 3/10  loss=0.4348
+  [sparse-train] epoch 4/10  loss=0.4262
+  [sparse-train] epoch 5/10  loss=0.4637
+  [sparse-train] epoch 6/10  loss=0.4700
+  [sparse-train] epoch 7/10  loss=0.4443
+  [sparse-train] epoch 8/10  loss=0.4219
+  [sparse-train] epoch 9/10  loss=0.4137
+  [sparse-train] epoch 10/10  loss=0.4490
+          setelah fine-tune 10 epoch -> acc=0.8818
+
+Step 8/10: potong (rate per-langkah=0.083) -> acc=0.8879, params=33643336
+  [sparse-train] epoch 1/10  loss=0.4201
+  [sparse-train] epoch 2/10  loss=0.4008
+  [sparse-train] epoch 3/10  loss=0.3900
+  [sparse-train] epoch 4/10  loss=0.3775
+  [sparse-train] epoch 5/10  loss=0.4235
+  [sparse-train] epoch 6/10  loss=0.4284
+  [sparse-train] epoch 7/10  loss=0.4168
+  [sparse-train] epoch 8/10  loss=0.3937
+  [sparse-train] epoch 9/10  loss=0.3760
+  [sparse-train] epoch 10/10  loss=0.3615
+          setelah fine-tune 10 epoch -> acc=0.9545
+
+Step 9/10: potong (rate per-langkah=0.083) -> acc=0.9515, params=28027792
+  [sparse-train] epoch 1/10  loss=0.3566
+  [sparse-train] epoch 2/10  loss=0.3582
+  [sparse-train] epoch 3/10  loss=0.3346
+  [sparse-train] epoch 4/10  loss=0.3420
+  [sparse-train] epoch 5/10  loss=0.3496
+  [sparse-train] epoch 6/10  loss=0.3751
+  [sparse-train] epoch 7/10  loss=0.3507
+  [sparse-train] epoch 8/10  loss=0.3299
+  [sparse-train] epoch 9/10  loss=0.3444
+  [sparse-train] epoch 10/10  loss=0.3487
+          setelah fine-tune 10 epoch -> acc=0.8485
+
+Step 10/10: potong (rate per-langkah=0.083) -> acc=0.8303, params=23980488
+  [sparse-train] epoch 1/10  loss=0.3525
+  [sparse-train] epoch 2/10  loss=0.3295
+  [sparse-train] epoch 3/10  loss=0.3206
+  [sparse-train] epoch 4/10  loss=0.3268
+  [sparse-train] epoch 5/10  loss=0.3806
+  [sparse-train] epoch 6/10  loss=0.4055
+  [sparse-train] epoch 7/10  loss=0.3614
+  [sparse-train] epoch 8/10  loss=0.3494
+  [sparse-train] epoch 9/10  loss=0.3298
+  [sparse-train] epoch 10/10  loss=0.3099
+          setelah fine-tune 10 epoch -> acc=0.9394
+
+Hasil akhir iterative pruning: 23980488 params (82.2% reduksi dari awal), akurasi = 0.9394
+[4/4] Stage 3: distillation (30 epoch) ...
+  [distill]     epoch 1/30  hard_loss=0.0134  soft_loss=5.3493  total=2.6813  acc=0.9667  <- TERBAIK sejauh ini
+  [distill]     epoch 2/30  hard_loss=0.0098  soft_loss=2.4498  total=1.2298  acc=0.9758  <- TERBAIK sejauh ini
+  [distill]     epoch 3/30  hard_loss=0.0068  soft_loss=1.6918  total=0.8493  acc=0.9788  <- TERBAIK sejauh ini
+  [distill]     epoch 4/30  hard_loss=0.0040  soft_loss=1.6796  total=0.8418  acc=0.9667
+  [distill]     epoch 5/30  hard_loss=0.0050  soft_loss=1.5401  total=0.7726  acc=0.9727
+  [distill]     epoch 6/30  hard_loss=0.0055  soft_loss=1.4523  total=0.7289  acc=0.9727
+  [distill]     epoch 7/30  hard_loss=0.0053  soft_loss=1.4151  total=0.7102  acc=0.9727
+  [distill]     epoch 8/30  hard_loss=0.0038  soft_loss=1.3696  total=0.6867  acc=0.9727
+  [distill]     epoch 9/30  hard_loss=0.0039  soft_loss=1.3722  total=0.6881  acc=0.9636
+  [distill]     epoch 10/30  hard_loss=0.0040  soft_loss=1.3147  total=0.6593  acc=0.9758
+  [distill]     epoch 11/30  hard_loss=0.0046  soft_loss=1.3824  total=0.6935  acc=0.9758
+  [distill]     epoch 12/30  hard_loss=0.0044  soft_loss=1.2603  total=0.6324  acc=0.9758
+  [distill]     epoch 13/30  hard_loss=0.0039  soft_loss=1.3149  total=0.6594  acc=0.9667
+  [distill]     epoch 14/30  hard_loss=0.0073  soft_loss=1.2157  total=0.6115  acc=0.9697
+  [distill]     epoch 15/30  hard_loss=0.0032  soft_loss=1.2293  total=0.6163  acc=0.9788
+  [distill]     epoch 16/30  hard_loss=0.0034  soft_loss=1.1411  total=0.5722  acc=0.9727
+  [distill]     epoch 17/30  hard_loss=0.0035  soft_loss=1.1415  total=0.5725  acc=0.9758
+  [distill]     epoch 18/30  hard_loss=0.0044  soft_loss=1.1244  total=0.5644  acc=0.9727
+  [distill]     epoch 19/30  hard_loss=0.0037  soft_loss=1.1257  total=0.5647  acc=0.9727
+  [distill]     epoch 20/30  hard_loss=0.0054  soft_loss=1.1056  total=0.5555  acc=0.9727
+  [distill]     epoch 21/30  hard_loss=0.0067  soft_loss=1.0930  total=0.5498  acc=0.9636
+  [distill]     epoch 22/30  hard_loss=0.0042  soft_loss=1.0482  total=0.5262  acc=0.9727
+  [distill]     epoch 23/30  hard_loss=0.0033  soft_loss=1.0747  total=0.5390  acc=0.9727
+  [distill]     epoch 24/30  hard_loss=0.0030  soft_loss=1.0363  total=0.5197  acc=0.9758
+  [distill]     epoch 25/30  hard_loss=0.0069  soft_loss=1.0400  total=0.5235  acc=0.9697
+  [distill]     epoch 26/30  hard_loss=0.0045  soft_loss=1.0314  total=0.5180  acc=0.9758
+  [distill]     epoch 27/30  hard_loss=0.0031  soft_loss=1.0038  total=0.5034  acc=0.9697
+  [distill]     epoch 28/30  hard_loss=0.0032  soft_loss=1.0404  total=0.5218  acc=0.9727
+  [distill]     epoch 29/30  hard_loss=0.0052  soft_loss=1.0123  total=0.5087  acc=0.9727
+  [distill]     epoch 30/30  hard_loss=0.0050  soft_loss=1.0076  total=0.5063  acc=0.9727
+
+  [distill] Memulihkan bobot dari EPOCH TERBAIK (3, akurasi=0.9788) -- bukan epoch terakhir (30, akurasi=0.9727272727272728)
+C:\Users\tnugroho\Pruning_Paper\new_scripts_Pruning_Kd.py:1273: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  ckpt = torch.load(path, map_location=device)
+  Checkpoint dimuat dari: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\3_distilled_augv2_run1.pt (backbone_type='vgg', 90.6 MB, 23,729,325 params)
+
+>>> LATENCY GPU batch=1: lama=3.953 ms  baru(aligned)=2.548 ms  LEBIH CEPAT (1.55x)
+
+>>> RUN 1 TEST SET: acc lama=99.42%  acc baru(aligned)=98.46%  params lama=23.73M  params baru=23.98M
+  Checkpoint disimpan ke: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run1.pt  (91.5 MB di disk, 23,980,488 params)
+Checkpoint baru disimpan: D:\Documents\Computer Eng\PhD\Lecture PhD\Research_Paper\IEEE\checkpoints_final_augv2\5_distilled_aligned_run1.pt
+
+Selesai. Hasil tersimpan di channel_rounding_poc.csv.
