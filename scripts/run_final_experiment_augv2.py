@@ -1,27 +1,3 @@
-"""
-FINAL STAGE -- konfigurasi terkunci: augmentasi v2 (translasi+zoom+cutout+
-brightness/contrast diperlebar) + IMAGE_SIZE=64 + parameter lain SAMA
-PERSIS seperti manuskrip (target_rate=0.58, KD_EPOCHS=30, dst).
-
-Ini BUKAN eksplorasi lagi -- ini laporan hasil dari konfigurasi yang
-SUDAH diputuskan (lihat riwayat: teacher-only augmentasi v2 = 99.52%+-
-0.17%, full-pipeline validation 3x run = 99.39% konsisten). Karena itu,
-evaluasi TEST SET SEKALI per run di sini legitimate -- bukan "mengintip"
-untuk memilih konfigurasi (itu sudah selesai di tahap validation-only),
-tapi melaporkan hasil akhir dari SATU konfigurasi final untuk mengukur
-stabilitasnya (5 run independen, persis semangat yang diminta reviewer).
-
-Checkpoint disimpan ke folder BARU (TMP_CHECKPOINT_DIR di bawah) --
-TIDAK menyentuh folder checkpoint lama/path tetap pipeline Anda sama
-sekali.
-
-CARA PAKAI:
-  1. Ganti PIPELINE_MODULE_NAME kalau beda.
-  2. python run_final_experiment_augv2.py
-  3. Hasil (teacher/pruned/distilled, accuracy+macro-F1, test set,
-     SEKALI per run) tertulis ke final_results_augv2.csv, plus ringkasan
-     mean+-std di akhir -- INI yang jadi angka final.
-"""
 import os
 import csv
 import copy
