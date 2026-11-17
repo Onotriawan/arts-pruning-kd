@@ -1,0 +1,1 @@
+This folder holds result CSVs produced by the scripts (e.g., compression_verification_augv2.csv, channel_rounding_poc.csv). Generated files are git-ignored; this folder is kept with a placeholder so the expected output location is visible.
