@@ -1,22 +1,3 @@
-"""
-Regenerasi Figure 7 (Iterative Pruning Trajectory), Figure 9 (KD Training
-Loss), dan Figure 10 (keep_best Model Selection) menggunakan data RUN 10
-dari eksperimen final (augmentasi v2 + IMAGE_SIZE=64) -- diekstrak langsung
-dari final_augv2_continue_log.txt, bukan dari run lama/pre-augmentasi-v2.
-
-Run 10 dipilih karena ini run TERAKHIR yang dijalankan (representatif dari
-konfigurasi final) dan kebetulan juga run di mana teacher mencapai 100%
-akurasi test -- menarik untuk ditampilkan.
-
-CATATAN: Figure 6 (distribusi gamma) TIDAK bisa direkonstruksi dari log ini
--- itu perlu data mentah nilai gamma per-channel yang tidak dicetak ke
-console. Figure 8 (channel counts) TIDAK PERLU diupdate karena sudah
-terverifikasi deterministik 100% di semua 10 run.
-
-CARA PAKAI (jalankan di komputer manapun dengan matplotlib, tidak perlu
-pipeline/model/GPU -- semua data sudah di-hardcode dari log):
-  python regenerate_figures_run10.py
-"""
 import matplotlib.pyplot as plt
 import numpy as np
 
