@@ -160,39 +160,6 @@ class ArabicTrafficSignsDataset(Dataset):
  
 def split_train_val(train_dir, train_csv, image_size=64, val_ratio=0.15,
                      augment_train=True, batch_size=32, split_seed=42):
-    """Memecah data TRAINING (bukan test) jadi train + validation, supaya
-    semua monitoring/model-selection selama training (keep_best di
-    kd_train, iterative_prune, sweep_pruning_rates) bisa memakai validation
-    set -- BUKAN test set. Test set (TEST_DIR/TEST_CSV) harus tetap
-    tersentuh HANYA SEKALI, di akhir segalanya, untuk laporan final yang
-    jujur secara metodologis.
- 
-    PENTING -- split_seed=42 (TETAP, bukan acak): supaya split train/val
-    KONSISTEN di setiap kali main() dipanggil, di run manapun. Tanpa ini,
-    checkpoint yang dilatih di Run 1 (dengan split acak #1) lalu dimuat
-    ulang di Run 2 (dengan split acak #2 yang BEDA) akan menyebabkan
-    sebagian gambar "validation" di Run 2 ternyata adalah gambar yang
-    SUDAH DILATIH di Run 1 (karena termasuk di "train" Run 1 tapi kebetulan
-    jadi "val" di split acak Run 2) -- mencemari validation TANPA disadari,
-    walau split di masing-masing run sendiri sudah benar secara internal.
-    Dengan seed tetap, 330 gambar validation SELALU sama persis di run
-    manapun, sehingga sebuah checkpoint yang dilatih HANYA di 1870 gambar
-    "train" di satu run tetap konsisten bersih ketika dievaluasi ulang di
-    run lain manapun.
- 
-    PENTING: validation TIDAK diaugmentasi (augment=False selalu) --
-    supaya pengukurannya stabil/bersih, sama seperti alasan test set juga
-    tidak diaugmentasi. Training tetap diaugmentasi (augment_train=True
-    default), sesuai temuan kita sebelumnya bahwa augmentasi membantu
-    dataset kecil seperti ini.
- 
-    Dua Dataset OBJEK TERPISAH dibangun dari CSV/folder yang SAMA (satu
-    augment=True untuk train, satu augment=False untuk val) supaya kedua
-    subset punya perilaku transform yang benar -- lalu di-split pakai
-    INDEKS yang sama (via Subset) supaya gambar yang masuk ke train vs val
-    konsisten, tidak ada overlap.
- 
-    Return: (train_loader, val_loader, num_classes, label_to_idx)"""
     ds_augmented = ArabicTrafficSignsDataset(train_dir, train_csv, image_size=image_size,
                                               augment=augment_train)
     ds_plain = ArabicTrafficSignsDataset(train_dir, train_csv, image_size=image_size,
@@ -206,11 +173,6 @@ def split_train_val(train_dir, train_csv, image_size=64, val_ratio=0.15,
     n_val = max(1, int(round(n_total * val_ratio)))
     n_train = n_total - n_val
  
-    # generator TERPISAH dengan seed TETAP -- supaya urutan acak SELALU
-    # sama, tidak peduli apakah ada kode lain yang sudah "mencuri" nomor
-    # acak dari generator torch global sebelumnya (mis. inisialisasi bobot
-    # model, augmentasi, dsb -- semua itu masih tetap acak seperti biasa,
-    # cuma split ini yang dikunci reproducible)
     split_generator = torch.Generator().manual_seed(split_seed)
     perm = torch.randperm(n_total, generator=split_generator).tolist()
     train_indices = perm[:n_train]
@@ -229,22 +191,6 @@ def split_train_val(train_dir, train_csv, image_size=64, val_ratio=0.15,
     return train_loader, val_loader, ds_augmented.num_classes, ds_augmented.label_to_idx
  
  
-# ---------------------------------------------------------------------------
-# 1a. RepVGG: multi-branch training block that RE-PARAMETERIZES into a
-#     single plain Conv-BN-ReLU (no skip connections) before pruning.
-#
-#     Why: training with 3 branches (3x3 conv, 1x1 conv, identity) gives
-#     ResNet-like gradient flow and typically better accuracy than a plain
-#     stack. After training, the 3 branches are fused mathematically into
-#     ONE Conv2d(bias=False) + BatchNorm2d pair per block -- so the network
-#     that actually gets pruned is purely sequential, exactly matching what
-#     prune_layerwise() / prune_sequential_model() below already handle,
-#     with NO modification needed to that code.
-#
-#     Fusion correctness was verified block-by-block and end-to-end before
-#     shipping this: multi-branch output vs. fused output differ by ~1e-5,
-#     i.e. floating-point noise, not a real discrepancy.
-# ---------------------------------------------------------------------------
 class RepVGGBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1):
         super().__init__()
@@ -416,32 +362,6 @@ class TrafficSignNet(nn.Module):
             triples.append((producer, bn, consumer))
         return triples
  
- 
- 
- 
-# ---------------------------------------------------------------------------
-# 1b. VGG (pretrained ImageNet) -- backbone alternatif. Dibangun MANUAL di
-#     sini (bukan import torchvision.models) supaya tidak bergantung pada
-#     torchvision sama sekali -- ini menghindari error
-#     "AttributeError: module 'torch.library' has no attribute
-#     'register_fake'" yang terjadi kalau versi torch dan torchvision di
-#     environment Anda tidak sinkron (masalah umum di conda env lama).
-#
-#     Arsitektur di bawah direplikasi PERSIS sama dengan definisi resmi
-#     torchvision (nama layer, urutan, susunan channel) -- sudah diverifikasi
-#     bahwa state_dict() keduanya punya kunci yang identik 100%, sehingga
-#     bobot pretrained ImageNet resmi tetap bisa dimuat langsung tanpa
-#     konversi apapun. Bobotnya diambil lewat torch.hub (bagian INTI
-#     PyTorch, bukan torchvision), jadi satu-satunya kebutuhan adalah akses
-#     internet ke download.pytorch.org -- tidak butuh package torchvision
-#     terinstall/berfungsi sama sekali.
-#
-#     VGG TIDAK PERNAH punya skip connection sejak awal (beda dari ResNet),
-#     jadi tidak butuh trik fusion seperti RepVGG -- features-nya sudah
-#     sekuensial murni. Bedanya dari TrafficSignNet: VGG tidak pooling di
-#     SETIAP layer, jadi perlu fungsi pruning yang lebih umum
-#     (prune_vgg_layerwise di bawah).
-# ---------------------------------------------------------------------------
 _VGG_CFGS = {
     "vgg11_bn": [64, "M", 128, "M", 256, 256, "M", 512, 512, "M", 512, 512, "M"],
     "vgg16_bn": [64, 64, "M", 128, 128, "M", 256, 256, 256, "M",
@@ -627,22 +547,6 @@ def prune_vgg_layerwise(vgg_model, pruning_rate, min_channels_per_layer=8):
  
  
 def prune_vgg_classifier_fc(vgg_model, pruning_rate, min_neurons=64):
-    """Memangkas LEBAR classifier VGG (fc1 output, fc2 input+output) --
-    BERBEDA dari prune_vgg_layerwise() yang cuma memangkas conv/features.
- 
-    VGG classifier (fc1: 4096, fc2: 4096->4096, fc3: 4096->num_classes)
-    TIDAK punya BatchNorm, jadi tidak ada sinyal 'gamma' seperti di conv
-    layers. Kriteria kepentingan di sini: L1-norm (jumlah nilai absolut)
-    dari bobot masuk tiap neuron output -- neuron dengan bobot yang secara
-    kolektif besar dianggap lebih penting, mirip semangatnya dengan
-    kriteria gamma tapi diterapkan langsung ke magnitude bobot.
- 
-    fc3 output TIDAK dipangkas (itu = jumlah kelas, tidak boleh diubah).
-    fc2 mendapat manfaat kompounding kuadratik yang sama seperti conv layers
-    (in DAN out dimension-nya sama-sama menyusut), jadi ini efektif untuk
-    memangkas ukuran file secara signifikan -- fc2 sendirian menyumbang
-    ~16.8 juta parameter (~64 MB) di VGG16 standar, dan TIDAK tersentuh
-    sama sekali oleh prune_vgg_layerwise() saja."""
     old_layers = list(vgg_model.classifier.children())
     fc1, relu1, drop1, fc2, relu2, drop2, fc3 = old_layers
  
@@ -731,27 +635,6 @@ def compute_global_threshold(model, pruning_rate=0.45):
     idx = min(max(idx, 0), len(sorted_gammas) - 1)
     return sorted_gammas[idx].item()
  
- 
-# ---------------------------------------------------------------------------
-# 4. Stage 2b: physical channel removal (network surgery)
-#
-#    Two pruning strategies are provided:
-#
-#    - prune_sequential_model(): a SINGLE global threshold across all BN
-#      layers (the paper's Section 4.2 approach). This assumes gamma values
-#      are on a comparable scale across layers -- if they aren't, a global
-#      threshold can disproportionately gut one layer (observed: on a real
-#      run, the first conv layer lost 38% of its channels while a later
-#      layer lost only 6%, purely from gamma-scale differences, not real
-#      importance differences).
-#
-#    - prune_layerwise(): each layer independently keeps its own top
-#      (1 - pruning_rate) fraction of channels by |gamma|. This avoids the
-#      cross-layer scale bias above. Empirically, on a controlled learnable
-#      task, this recovered full accuracy at rates where the global-
-#      threshold method collapsed to ~25% (near chance): see the comparison
-#      table in this repo's test notes. RECOMMENDED DEFAULT.
-# ---------------------------------------------------------------------------
 def print_gamma_diagnostics(model):
     """Prints per-layer BN gamma spread, so you can see whether sparse
     training actually separated 'important' from 'unimportant' channels
@@ -773,16 +656,6 @@ def print_gamma_diagnostics(model):
  
  
 def export_gamma_distribution(model, path):
-    """Ekspor NILAI |gamma| MENTAH tiap channel di tiap layer ke CSV --
-    beda dari print_gamma_diagnostics() yang cuma cetak ringkasan
-    (min/mean/max/relative_spread). Data mentah ini yang dibutuhkan untuk
-    membuat histogram/violin plot distribusi gamma per layer (pembuktian
-    visual 'clear separation' antara channel penting vs tidak penting,
-    konsep dari Eq. 8-10 paper).
- 
-    Format CSV: kolom 'layer' (indeks layer), 'gamma_abs' (nilai |gamma|
-    satu channel) -- long format, satu baris per channel, siap langsung
-    dipakai seaborn.violinplot() / histplot() dengan hue='layer'."""
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     bn_layers = list(model.bns) if hasattr(model, "bns") else \
         [m for m in model.modules() if isinstance(m, nn.BatchNorm2d)]
@@ -911,39 +784,10 @@ def prune_layerwise(model, pruning_rate, min_channels_per_layer=2):
  
     return pruned
  
- 
-# ---------------------------------------------------------------------------
-# 5. Stage 3: knowledge distillation (paper Eq. 11)
-#    L_total = mu * L_hard(P_student, y) + (1 - mu) * L_soft(P_student, P_teacher)
-#    where P = softmax(logits / temperature). This is what recovers the
-#    accuracy lost during pruning -- pruning alone is NOT expected to
-#    preserve accuracy on its own (see the paper's own Table 2, where
-#    precision drops from 0.821 to 0.757 right after pruning, before KD).
-# ---------------------------------------------------------------------------
 def kd_train(student, teacher, dataloader, epochs=20, lr=1e-3,
              mu=0.5, temperature=4.0, device="cpu",
              test_loader=None, eval_every=1, keep_best=True):
-    """teacher = the UNPRUNED trained model (frozen, eval mode).
-    student = the PRUNED model (trainable).
- 
-    Sekarang mencatat hard_loss dan soft_loss TERPISAH per epoch (seperti
-    Fig. 13(a) paper -- 'Hard Label Loss' dan 'Soft Label Loss'), bukan
-    cuma loss gabungan. Kalau test_loader diberikan, akurasi juga dicatat
-    tiap eval_every epoch (untuk membuat grafik seperti Fig. 13(b) paper --
-    mAP@0.5 vs mAP@0.5_KD, di kita jadi accuracy vs accuracy_KD).
- 
-    keep_best=True (default): loss yang menurun TIDAK SELALU berarti akurasi
-    membaik (soft_loss bisa terus turun -- model makin mirip distribusi
-    probabilitas teacher -- tanpa argmax/akurasinya ikut membaik, bahkan
-    kadang memburuk). Kalau ini terjadi, epoch TERAKHIR belum tentu yang
-    TERBAIK. keep_best=True melacak state_dict di epoch dengan akurasi
-    tertinggi, dan mengembalikan model di titik TERBAIK itu, bukan cuma
-    epoch terakhir. Butuh test_loader untuk bekerja (kalau tidak ada,
-    otomatis fallback ke epoch terakhir seperti biasa).
- 
-    Return: (student, history) -- history adalah dict berisi list per-epoch:
-    'hard_loss', 'soft_loss', 'total_loss', 'accuracy', dan
-    'best_epoch'/'best_accuracy' (kalau keep_best=True dan test_loader ada)."""
+
     teacher.eval()
     student.train()
     student.to(device)
@@ -1018,20 +862,6 @@ def kd_train(student, teacher, dataloader, epochs=20, lr=1e-3,
  
 def compare_kd_vs_no_kd(pruned_model, teacher, train_loader, test_loader,
                          epochs=30, lr=1e-4, mu=0.5, temperature=4.0, device="cpu"):
-    """Melatih DUA salinan model paralel dari titik pruned yang SAMA:
-    - 'no_kd'  : fine-tune biasa, HANYA label asli (mu=1.0 -> soft_loss
-                 berbobot nol, jadi identik dengan cross-entropy murni)
-    - 'kd'     : distillation penuh (hard+soft loss, seperti biasa)
- 
-    Keduanya dilatih dengan JUMLAH EPOCH DAN DATA YANG SAMA, satu-satunya
-    perbedaan adalah ada/tidaknya bimbingan teacher -- supaya perbandingan
-    adil. Ini mereplikasi Fig. 13(b) paper (mAP@0.5 vs mAP@0.5_KD): dua
-    kurva akurasi berdampingan, satu tanpa KD, satu dengan KD.
- 
-    Return: (model_no_kd, model_kd, comparison_history) dengan
-    comparison_history = {'accuracy_no_kd': [...], 'accuracy_kd': [...],
-    'hard_loss_no_kd': [...], 'hard_loss_kd': [...], 'soft_loss_kd': [...]}
-    """
     print("\n=== Perbandingan: TANPA KD vs DENGAN KD (paralel, titik awal sama) ===")
  
     model_no_kd = copy.deepcopy(pruned_model)
@@ -1068,25 +898,6 @@ def compare_kd_vs_no_kd(pruned_model, teacher, train_loader, test_loader,
  
 @torch.no_grad()
 def recalibrate_batchnorm(model, dataloader, num_batches=20, device="cpu"):
-    """CRITICAL step after ANY pruning: refreshes each BatchNorm layer's
-    running_mean/running_var to match the activation distribution of the
-    PRUNED network, via a few forward passes in train() mode -- WITHOUT
-    any backward pass or optimizer step (no weight updates at all).
- 
-    Why this matters: sparse_train() calibrates each BN's running stats
-    against the FULL (unpruned) set of channels. Once prune_layerwise() /
-    prune_sequential_model() physically removes some channels, the
-    surviving channels' activation distribution shifts (the contribution
-    of removed channels is gone) -- but the old running stats don't know
-    that, so BN normalizes with stale statistics. This was confirmed
-    empirically to cause severe accuracy collapse even at very small
-    pruning rates (5-10%) on a harder classification task: recalibration
-    alone (zero weight updates) recovered 17-52% -> 100% accuracy. This
-    is a pure statistics mismatch, not lost network capacity -- always
-    call this right after pruning, before evaluating accuracy or running
-    sweep_pruning_rates(), and before deciding whether distillation is
-    even needed.
-    """
     model.train()  # BN uses batch statistics + updates running stats in this mode
     model.to(device)
     for m in model.modules():
@@ -1106,18 +917,6 @@ def count_params(model):
  
 @torch.no_grad()
 def count_flops(model, input_size=(1, 3, 64, 64), device="cpu"):
-    """Hitung FLOPs (floating point operations) untuk SATU forward pass,
-    lewat forward hook -- otomatis bekerja untuk arsitektur apapun (VGG,
-    TrafficSignNet, RepVGG-fused), tanpa perlu library eksternal (thop/
-    ptflops/fvcore, yang tidak selalu bisa diinstal di environment
-    tertentu).
- 
-    Formula per jenis layer (konvensi umum: 1 MAC = 2 FLOPs):
-      Conv2d: FLOPs = 2 * C_in * C_out * K_h * K_w * H_out * W_out / groups
-      Linear: FLOPs = 2 * in_features * out_features
- 
-    Return: total_flops (int). Untuk laporan biasa, bagi dengan 1e9 untuk
-    dapat satuan GFLOPs (seperti kolom 'FLOPs(G)' di paper)."""
     flops = [0]
     hooks = []
  
@@ -1150,29 +949,6 @@ def count_flops(model, input_size=(1, 3, 64, 64), device="cpu"):
  
 def measure_inference_time(model, input_size=(1, 3, 64, 64), device="cpu",
                             n_warmup=50, n_runs=500):
-    """Ukur waktu inferensi RATA-RATA (dalam detik) untuk satu forward pass,
-    di HARDWARE Anda sendiri saat ini (CPU/GPU manapun yang Anda pakai --
-    ini SENGAJA tidak bisa saya ukurkan dari sandbox saya, karena angka ini
-    HARUS dari hardware target deployment Anda supaya bermakna).
- 
-    Untuk GPU (device='cuda'): pakai torch.cuda.Event -- pola BAKU untuk
-    benchmark CUDA, mengukur waktu LANGSUNG dari hardware GPU (bukan cuma
-    wall-clock Python + torch.cuda.synchronize() seperti versi sebelumnya).
-    Lebih presisi terutama untuk model kecil/cepat, di mana overhead
-    Python sendiri bisa jadi signifikan relatif terhadap waktu GPU asli.
-    Untuk CPU: tetap pakai time.perf_counter() (torch.cuda.Event tidak
-    berlaku untuk CPU).
- 
-    input_size: (batch_size, C, H, W) -- UBAH batch_size pertama untuk uji
-    beban lebih besar (mis. (32,3,64,64)), karena keuntungan FLOPs sering
-    baru terlihat jelas di batch besar, bukan batch_size=1 (lihat diskusi
-    soal GPU under-utilization di batch tunggal).
- 
-    n_warmup: forward pass awal yang DIBUANG dari perhitungan (CUDA/cache
-    butuh 'pemanasan' -- run pertama biasanya jauh lebih lambat dari
-    run-run berikutnya, bukan representasi kecepatan sebenarnya).
-    n_runs: jumlah forward pass yang DIUKUR dan dirata-rata, supaya hasil
-    stabil (bukan cuma sekali ukur yang rentan noise)."""
     import time
     model.eval()
     model.to(device)
@@ -1293,16 +1069,6 @@ def load_checkpoint(path, device="cpu"):
  
  
 def get_channel_counts(model):
-    """Ekstrak jumlah channel per layer dari model apapun yang didukung
-    file ini (VGG atau TrafficSignNet/RepVGG-fused). Return: list of
-    (nama_layer, jumlah_channel), urutan sesuai forward pass -- data
-    mentah untuk membuat diagram gaya Fig. 12 paper (original vs pruned
-    channel per layer).
- 
-    Untuk VGG: menyertakan LAYER CONV *dan* fc1/fc2 (classifier) --
-    penting karena prune_vgg_full() memangkas keduanya, jadi perbandingan
-    yang cuma lihat conv akan melewatkan sebagian besar cerita kompresi
-    (fc2 sendirian ~16.8 juta parameter di VGG16 standar)."""
     if hasattr(model, "bns"):  # TrafficSignNet / RepVGG (fused)
         return [(f"layer_{i}.conv", bn.num_features) for i, bn in enumerate(model.bns)]
     else:  # VGG
@@ -1315,13 +1081,6 @@ def get_channel_counts(model):
  
  
 def compare_channel_counts(original_path_or_model, pruned_path_or_model, device="cpu"):
-    """Bandingkan channel per-layer antara model SEBELUM dan SESUDAH
-    pruning -- persis data yang dipakai paper untuk Fig. 12 ("Number of
-    original and pruned channels"). Terima path checkpoint (string) ATAU
-    objek model langsung.
- 
-    Return: dict {'layer_names': [...], 'original': [...], 'pruned': [...]}
-    -- siap dipakai langsung sebagai 2 series di grafik bar berdampingan."""
     if isinstance(original_path_or_model, str):
         original_model, _ = load_checkpoint(original_path_or_model, device=device)
     else:
@@ -1369,18 +1128,6 @@ def evaluate(model, dataloader, device="cpu"):
  
 @torch.no_grad()
 def evaluate_detailed(model, dataloader, num_classes, device="cpu", class_names=None):
-    """Versi lengkap evaluate() -- selain akurasi keseluruhan, juga hitung
-    CONFUSION MATRIX dan precision/recall/F1 PER-KELAS. Dibangun manual
-    (tanpa sklearn) supaya tidak perlu instalasi tambahan.
- 
-    PENTING: panggil ini HANYA SEKALI di test set asli, di titik yang sama
-    dengan evaluasi akurasi final -- jangan dipakai untuk monitoring
-    berulang selama training (sama seperti evaluate() biasa, disiplin
-    val/test yang sudah kita bangun tetap berlaku di sini).
- 
-    Return: dict berisi 'confusion_matrix' (num_classes x num_classes,
-    baris=label asli, kolom=prediksi), 'per_class' (list dict berisi
-    precision/recall/f1/support per kelas), 'accuracy', 'macro_f1'."""
     model.eval()
     model.to(device)
  
@@ -1482,29 +1229,6 @@ def save_confusion_matrix_csv(result, path, class_names=None):
 def iterative_prune(model, train_loader, test_loader, target_rate, n_steps=5,
                      finetune_epochs_per_step=5, sparsity_lambda=0.008,
                      min_channels_per_layer=2, device="cpu", prune_fn=None):
-    """Prunes gradually instead of in one shot: cuts a small fraction of
-    channels, briefly fine-tunes (so the surviving weights adapt to the
-    new, smaller network), then repeats until the CUMULATIVE reduction
-    reaches target_rate.
- 
-    prune_fn: which pruning function to use each step -- defaults to
-    prune_layerwise (for TrafficSignNet). Pass prune_vgg_layerwise when
-    pruning a VGG model instead.
- 
-    Why: a single large cut (e.g. pruning_rate=0.30 in one shot) can be a
-    "shock" the network never recovers from even with distillation
-    afterward, especially for a shallow network with no skip connections.
-    Cutting a little at a time and letting the model adapt between cuts is
-    the standard mitigation for this in the pruning literature (and is
-    exactly the kind of "iterative pruning" the paper itself only prunes
-    once, but this fills that gap for architectures that need it).
- 
-    The per-step rate is computed GEOMETRICALLY so that n_steps of pruning
-    at that rate multiply out to the same overall keep-fraction as a single
-    cut at target_rate would -- e.g. target_rate=0.30 over 5 steps uses a
-    per-step rate of about 7% each, not 6% (0.30/5), because each step's
-    cut applies to an already-shrunk layer.
-    """
     if prune_fn is None:
         prune_fn = prune_layerwise
  
@@ -1551,39 +1275,6 @@ def sweep_pruning_rates(sparse_trained_model, test_loader, rates=None,
                          min_channels_per_layer=2, device="cpu", target_acc=None,
                          recalibrate_loader=None, recalibrate_batches=20,
                          prune_fn=None, num_classes=None):
-    """Finds the highest pruning_rate that keeps POST-PRUNING accuracy
-    (before any distillation) above target_acc, by trying several rates
-    on the SAME already-sparse-trained model. This mirrors the paper's own
-    Fig. 11 methodology (they swept pruning rates and plotted mAP vs. rate
-    to find their 'balance point').
- 
-    Cheap and fast: pruning + evaluation only, no retraining per rate --
-    so this can run in seconds even though sparse_train() itself is slow.
- 
-    Pass in the model from right after Stage 1 (sparse_train), evaluated
-    on your real held-out test set, to get numbers that reflect YOUR
-    actual dataset -- architecture fragility is data-dependent, so a rate
-    that's safe on a synthetic task is not guaranteed to be safe on real
-    traffic sign images, and vice versa.
- 
-    recalibrate_loader: if given (usually your TRAINING loader), each
-    pruned candidate has its BatchNorm running stats refreshed via
-    recalibrate_batchnorm() before evaluation. Without this, post-pruning
-    accuracy can look erratically bad even at tiny pruning rates, because
-    BN running stats become stale relative to the new (smaller) input
-    each layer receives after upstream channels are removed -- this is
-    NOT the same thing as genuine capacity loss, and recalibration is
-    nearly free (a few forward passes, no backward/optimizer step).
- 
-    prune_fn: fungsi pruning yang dipakai tiap rate -- default
-    prune_layerwise (TrafficSignNet/RepVGG). Untuk VGG, pass
-    prune_fn=prune_vgg_full (atau prune_vgg_layerwise).
- 
-    num_classes: kalau diisi, HITUNG JUGA macro precision/recall/F1 di
-    tiap rate (pakai evaluate_detailed), bukan cuma akurasi -- data ini
-    persis yang dibutuhkan untuk grafik gaya Fig. 11(b) paper (P, R, F1
-    vs prune rate), berdampingan dengan Fig. 11(a) (akurasi/params vs
-    prune rate) yang sudah didukung fungsi ini sejak awal."""
     if rates is None:
         rates = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45]
     if prune_fn is None:
@@ -1705,14 +1396,6 @@ GAMMA_DISTRIBUTION_SAVE_PATH = os.path.join(CHECKPOINT_DIR, "gamma_distribution.
                                                                           # mentah tiap channel/layer --
                                                                           # untuk histogram distribusi gamma
  
-# --- 0. FOKUS AKURASI DULU (sebelum pruning) ---
-# Kalau True: TIDAK akan lanjut ke Stage 2 (pruning) sama sekali -- cuma
-# jalankan Stage 0 + Stage 1, laporkan akurasi, lalu berhenti. Juga MATIKAN
-# sparsity penalty selama fase ini (SPARSITY_LAMBDA diabaikan, dipaksa 0),
-# karena penalti itu hanya diperlukan untuk PERSIAPAN pruning nanti --
-# kita sudah buktikan penalti ini menahan akurasi sekitar 2pp, jadi tidak
-# ada gunanya dinyalakan kalau belum mau pruning. Nyalakan augmentasi data
-# juga, karena dataset training kita kecil (~90 gambar/kelas).
 FOCUS_ACCURACY_ONLY = True    # AKTIFKAN untuk VGG -- fine-tune dulu sampai stabil
                                 # SEBELUM sparsity penalty dinyalakan (lihat penjelasan
                                 # soal urutan yang benar secara akademik untuk model pretrained)
@@ -1778,12 +1461,6 @@ def main():
     print("PRUNING STUDY")
     print("=" * 70)
  
-    # --- load data: TRAIN dipecah jadi train+val (untuk monitoring selama
-    #     training/pruning/distillation -- TIDAK PERNAH pakai test asli).
-    #     TEST_DIR/TEST_CSV dimuat terpisah dan HANYA dipakai SEKALI, di
-    #     akhir segalanya, untuk laporan final yang jujur secara metodologis
-    #     (lihat diskusi soal data leakage kalau test dipakai berulang
-    #     untuk keep_best/monitoring). ---
     train_loader, val_loader, num_classes, label_to_idx = split_train_val(
         TRAIN_DIR, TRAIN_CSV, image_size=IMAGE_SIZE, val_ratio=VAL_SPLIT_RATIO,
         augment_train=USE_AUGMENTATION, batch_size=BATCH_SIZE,
@@ -1835,28 +1512,12 @@ def main():
         raise ValueError(f"BACKBONE tidak dikenal: '{BACKBONE}' "
                           f"(pakai 'plain', 'repvgg', 'vgg16', atau 'vgg11')")
  
-    # fungsi pruning yang dipakai tergantung arsitektur -- VGG butuh versi
-    # umum (prune_vgg_layerwise) karena strukturnya beda dari TrafficSignNet
-    # prune_vgg_full memangkas conv DAN fc classifier (fc1/fc2) -- jauh
-    # lebih efektif untuk VGG karena classifier menyumbang ~89% total
-    # parameter (fc2 sendiri 16.8 juta, tidak tersentuh kalau cuma
-    # pangkas conv saja). Ganti ke prune_vgg_layerwise kalau ingin
-    # kembali ke perilaku lama (cuma pangkas conv).
     prune_fn = prune_vgg_full if is_vgg else prune_layerwise
  
     params_before_sparse = count_params(model)
     acc_before_sparse = evaluate(model, val_loader, device=DEVICE)
     print(f"\nModel awal: {params_before_sparse} params, akurasi (VALIDATION) = {acc_before_sparse:.4f}")
  
-    # --- SIMPAN TEACHER ASLI sebelum sparse training merusak akurasinya --
-    # sparse training (Stage 1, dengan sparsity penalty) TERBUKTI menurunkan
-    # akurasi model (contoh nyata: 99.03% -> 92.08%), karena tujuannya
-    # memisahkan channel penting/tidak penting untuk pruning, BUKAN untuk
-    # akurasi murni. Kalau model yang sudah terdegradasi ini dipakai sebagai
-    # teacher di Stage 3, distillation cuma bisa mengejar akurasi teacher
-    # yang sudah rendah itu -- bukan akurasi terbaik yang pernah dicapai.
-    # Simpan salinan TERPISAH di sini (sebelum sparse_train dijalankan),
-    # supaya Stage 3 bisa pakai teacher yang akurasinya masih maksimal.
     if not FOCUS_ACCURACY_ONLY:
         print(f"\nMenyimpan salinan model SEBELUM sparse training (akurasi {acc_before_sparse:.4f}) "
               f"untuk dipakai sebagai teacher distillation nanti...")
@@ -2122,31 +1783,3 @@ if __name__ == "__main__":
     LOAD_CHECKPOINT_PATH = r"D:\Documents\Computer Eng\PhD\Lecture PhD\Comprehensive\Knowledge Destilation\Disertasi\Paper\checkpoints\hasil_bagus\1_finetuned.pt"  # sesuaikan path pastinya dari hasil dir /s /b
     FOCUS_ACCURACY_ONLY = False
     model, history, kd_history = main()
-# ============================================================================
-# CATATAN PENTING UNTUK PENGGUNA JUPYTER:
-#
-# Baris "if __name__ == '__main__': main()" SENGAJA DIHAPUS dari sini.
-#
-# Di Jupyter, __name__ selalu "__main__" di dalam sel apapun -- jadi kalau
-# baris itu ada, main() akan OTOMATIS terpanggil setiap kali sel INI
-# (yang berisi seluruh definisi file) dijalankan/dijalankan ulang, memakai
-# nilai konfigurasi yang tertanam DI DALAM PASTE INI -- bukan nilai yang
-# sudah Anda edit di sel lain. Ini menyebabkan training/download terulang
-# tanpa sengaja setiap kali sel definisi ini di-run ulang.
-#
-# CARA PAKAI YANG BENAR DI JUPYTER:
-#   Sel 1 (sel ini): definisi semua class/fungsi/konfigurasi -- jalankan
-#                     SEKALI saja setelah kernel start/restart.
-#   Sel 2 (sel BARU, terpisah): edit config yang perlu diubah (misal
-#                     LOAD_CHECKPOINT_PATH, FOCUS_ACCURACY_ONLY), lalu
-#                     panggil main() secara EKSPLISIT:
-#
-#       LOAD_CHECKPOINT_PATH = r"...\1_finetuned.pt"
-#       FOCUS_ACCURACY_ONLY = False
-#       model, hasil = main()
-#
-#   Untuk run berikutnya, CUKUP edit & jalankan ulang Sel 2 -- JANGAN
-#   jalankan ulang Sel 1 kecuali kernel benar-benar di-restart, karena
-#   itu akan mendefinisikan ulang variabel config ke nilai default di
-#   file ini (menimpa perubahan yang sudah Anda buat di Sel 2).
-# ============================================================================
