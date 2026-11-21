@@ -48,11 +48,7 @@ python scripts/verify_compression_10run.py
 python scripts/regenerate_figures_run10.py
 ```
 
-```bash
-# Benchmark per-image inference latency (mean +- SD over 10 repeats, with
-# warm-up and torch.cuda.synchronize() on GPU) across batch sizes 1/16/32
-python scripts/benchmark_latency.py
-```
+Per-image inference latency (mean $\pm$ SD over 10 repeats, with warm-up and `torch.cuda.synchronize()` on GPU, across batch sizes 1/16/32) was measured following the procedure described in the Inference Latency Measurement section of the paper.
 
 ## Main results
 
